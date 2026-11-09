@@ -6,32 +6,32 @@ Developer: **Lur (Lurcat)** · [Discord community](https://discord.gg/wardogskot
 
 ## How a firing solution is formed
 
-The map uses a tactical coordinate grid where one coordinate unit represents approximately 100 metres. For gun position \((X_g,Y_g)\) and target position \((X_t,Y_t)\):
+The map uses a tactical coordinate grid where one coordinate unit represents approximately 100 metres. For gun position $(X_g,Y_g)$ and target position $(X_t,Y_t)$:
 
-- Horizontal range: \(D=100\sqrt{(X_t-X_g)^2+(Y_t-Y_g)^2}\) metres.
-- Azimuth, measured clockwise from north: \(A=(\operatorname{atan2}(X_t-X_g,Y_t-Y_g)\cdot180/\pi+360)\bmod360\) degrees.
+- Horizontal range: $D=100\sqrt{(X_t-X_g)^2+(Y_t-Y_g)^2}$ metres.
+- Azimuth, measured clockwise from north: $A=(\operatorname{atan2}(X_t-X_g,Y_t-Y_g)\cdot180/\pi+360)\bmod360$ degrees.
 
-The selected weapon and trajectory provide a range-to-elevation table. Between adjacent table entries \((r_0,m_0)\) and \((r_1,m_1)\), elevation in mils is linearly interpolated:
+The selected weapon and trajectory provide a range-to-elevation table. Between adjacent table entries $(r_0,m_0)$ and $(r_1,m_1)$, elevation in mils is linearly interpolated:
 
-\[
+$$
 M(r)=m_0+\frac{r-r_0}{r_1-r_0}(m_1-m_0)
-\]
+$$
 
 The calculator checks the weapon's usable range and displays a firing solution or an out-of-range result. Supported SPH-2 low-trajectory map profiles can add a bounded empirical field correction. Between two confirmed calibration points, the correction follows the same linear interpolation rule and fades toward zero outside the calibrated range. This is a measured game-specific adjustment, not a universal ballistic law.
 
 ## Internal elevation surface
 
-The 2D map is paired with an internal, normally invisible elevation surface derived from its height data. Map coordinates are transformed to heightmap coordinates; the height between four neighboring samples is interpolated bilinearly. If \(q\) is the normalized 16-bit height value:
+The 2D map is paired with an internal, normally invisible elevation surface derived from its height data. Map coordinates are transformed to heightmap coordinates; the height between four neighboring samples is interpolated bilinearly. If $q$ is the normalized 16-bit height value:
 
-\[
+$$
 z=z_{min}+\frac{q}{65535}(z_{max}-z_{min})
-\]
+$$
 
-For neighboring heights \(h_{00},h_{10},h_{01},h_{11}\) and fractional position \((u,v)\):
+For neighboring heights $h_{00},h_{10},h_{01},h_{11}$ and fractional position $(u,v)$:
 
-\[
+$$
 h(u,v)=(1-u)(1-v)h_{00}+u(1-v)h_{10}+(1-u)vh_{01}+uvh_{11}
-\]
+$$
 
 This surface supplies elevation at the gun and target positions and supports terrain diagnostics. The current firing elevation remains based on the selected range table and applicable field calibration; the height surface is not itself a learned shot-correction grid.
 
@@ -59,16 +59,16 @@ LUR Artillery is a community-supported firing calculator for WARDOGS. It combine
 
 ## Calculation summary
 
-One tactical map coordinate unit represents approximately 100 metres. Given gun \((X_g,Y_g)\) and target \((X_t,Y_t)\):
+One tactical map coordinate unit represents approximately 100 metres. Given gun $(X_g,Y_g)$ and target $(X_t,Y_t)$:
 
-- Range: \(D=100\sqrt{(X_t-X_g)^2+(Y_t-Y_g)^2}\) metres.
-- Azimuth clockwise from north: \(A=(\operatorname{atan2}(X_t-X_g,Y_t-Y_g)\cdot180/\pi+360)\bmod360\) degrees.
+- Range: $D=100\sqrt{(X_t-X_g)^2+(Y_t-Y_g)^2}$ metres.
+- Azimuth clockwise from north: $A=(\operatorname{atan2}(X_t-X_g,Y_t-Y_g)\cdot180/\pi+360)\bmod360$ degrees.
 
-The selected weapon and trajectory table maps range to elevation in mils. Between neighboring entries, the calculator uses linear interpolation: \(M(r)=m_0+(r-r_0)(m_1-m_0)/(r_1-r_0)\). Supported SPH-2 low-trajectory profiles may add a bounded, map-specific correction based on confirmed field measurements. It fades toward zero beyond its calibrated range.
+The selected weapon and trajectory table maps range to elevation in mils. Between neighboring entries, the calculator uses linear interpolation: $M(r)=m_0+(r-r_0)(m_1-m_0)/(r_1-r_0)$. Supported SPH-2 low-trajectory profiles may add a bounded, map-specific correction based on confirmed field measurements. It fades toward zero beyond its calibrated range.
 
 ## Invisible elevation surface and observations
 
-An internal elevation surface is sampled over the 2D map using bilinear interpolation of neighboring heightmap values. A normalized 16-bit value \(q\) maps to elevation by \(z=z_{min}+q(z_{max}-z_{min})/65535\). This gives terrain heights at gun and target positions for diagnostics; the current firing elevation still comes from the selected range table and applicable field calibration.
+An internal elevation surface is sampled over the 2D map using bilinear interpolation of neighboring heightmap values. A normalized 16-bit value $q$ maps to elevation by $z=z_{min}+q(z_{max}-z_{min})/65535$. This gives terrain heights at gun and target positions for diagnostics; the current firing elevation still comes from the selected range table and applicable field calibration.
 
 Confirmed player adjustment series enrich the local empirical reference model. A continuous series is one independent confirmation; additional shots in that series refine its result. Optional, reviewed Community observations can enrich the shared model, while technical logs remain separate diagnostics and never enter firing calculations.
 

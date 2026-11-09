@@ -1,75 +1,52 @@
-# LUR Artillery
+# LUR Artillery — калькулятор стрельбы для WARDOGS
 
-**LUR Artillery** is a community-supported firing calculator for the game WARDOGS. It combines map coordinates, weapon range tables, field calibration and confirmed player observations to help estimate range and firing elevation.
+**LUR Artillery** — калькулятор стрельбы для игры WARDOGS, который объединяет координаты карты, таблицы дальности орудий, полевую корректировку и подтверждённые наблюдения игроков, чтобы оценивать дальность и угол возвышения.
 
-Developer: **Lur (Lurcat)** · [Discord community](https://discord.gg/wardogskoth)
+Разработчик: **Lur (Lurcat)** · [Сообщество в Discord](https://discord.gg/wardogskoth)
 
-## How a firing solution is formed
+## Как рассчитывается решение для стрельбы
 
-The map uses a tactical coordinate grid where one coordinate unit represents approximately 100 metres. For gun position $(X_g,Y_g)$ and target position $(X_t,Y_t)$:
+На тактической карте одна единица координат соответствует примерно 100 метрам. Пусть координаты орудия — $(X_g,Y_g)$, а цели — $(X_t,Y_t)$.
 
-- Horizontal range: $D=100\sqrt{(X_t-X_g)^2+(Y_t-Y_g)^2}$ metres.
-- Azimuth, measured clockwise from north: $A=(\operatorname{atan2}(X_t-X_g,Y_t-Y_g)\cdot180/\pi+360)\bmod360$ degrees.
+- Горизонтальная дальность: $D=100\sqrt{(X_t-X_g)^2+(Y_t-Y_g)^2}$ метров.
+- Азимут по часовой стрелке от севера: $A=(\operatorname{atan2}(X_t-X_g,Y_t-Y_g)\cdot180/\pi+360)\bmod360$ градусов.
 
-The selected weapon and trajectory provide a range-to-elevation table. Between adjacent table entries $(r_0,m_0)$ and $(r_1,m_1)$, elevation in mils is linearly interpolated:
+Для выбранных орудия и траектории используется таблица соответствия дальности и угла возвышения. Между соседними точками таблицы $(r_0,m_0)$ и $(r_1,m_1)$ угол в тысячных интерполируется линейно:
 
 $$
 M(r)=m_0+\frac{r-r_0}{r_1-r_0}(m_1-m_0)
 $$
 
-The calculator checks the weapon's usable range and displays a firing solution or an out-of-range result. Supported SPH-2 low-trajectory map profiles can add a bounded empirical field correction. Between two confirmed calibration points, the correction follows the same linear interpolation rule and fades toward zero outside the calibrated range. This is a measured game-specific adjustment, not a universal ballistic law.
+Калькулятор проверяет допустимую дальность выбранного орудия и показывает расчёт либо сообщает, что цель находится вне неё. Для поддерживаемых профилей САУ SPH-2 с настильной траекторией может применяться ограниченная эмпирическая полевая поправка. Между двумя подтверждёнными точками корректировки она также рассчитывается линейной интерполяцией и плавно уменьшается до нуля за пределами измеренного диапазона. Это поправка, основанная на измерениях в игре, а не универсальный закон баллистики.
 
-## Internal elevation surface
+## Внутренняя поверхность высот
 
-The 2D map is paired with an internal, normally invisible elevation surface derived from its height data. Map coordinates are transformed to heightmap coordinates; the height between four neighboring samples is interpolated bilinearly. If $q$ is the normalized 16-bit height value:
+С двухмерной картой связана обычно невидимая поверхность высот, построенная по данным карты высот. Координаты карты преобразуются в координаты карты высот, а высота между четырьмя соседними точками вычисляется билинейной интерполяцией. Если $q$ — нормированное 16-битное значение высоты:
 
 $$
 z=z_{min}+\frac{q}{65535}(z_{max}-z_{min})
 $$
 
-For neighboring heights $h_{00},h_{10},h_{01},h_{11}$ and fractional position $(u,v)$:
+Для соседних высот $h_{00},h_{10},h_{01},h_{11}$ и дробных частей координат $(u,v)$:
 
 $$
 h(u,v)=(1-u)(1-v)h_{00}+u(1-v)h_{10}+(1-u)vh_{01}+uvh_{11}
 $$
 
-This surface supplies elevation at the gun and target positions and supports terrain diagnostics. The current firing elevation remains based on the selected range table and applicable field calibration; the height surface is not itself a learned shot-correction grid.
+Поверхность задаёт высоту в точках орудия и цели и помогает анализировать рельеф. Текущий угол возвышения по-прежнему рассчитывается по таблице дальности выбранного орудия и применимой полевой корректировке. Поверхность высот сама по себе не является сеткой поправок, обученной по результатам выстрелов.
 
-## What player observations contribute
+## Что дают наблюдения игроков
 
-After a player records a confirmed adjustment series, its map, weapon, trajectory, positions and measured correction can improve the local reference model. One continuous series counts as one independent confirmation; repeated shots in that series refine its result instead of counting as separate confirmations.
+Когда игрок записывает подтверждённую серию корректировок, её карта, орудие, траектория, позиции и измеренная поправка могут уточнить локальную справочную модель. Одна непрерывная серия считается одним независимым подтверждением: дополнительные выстрелы уточняют результат серии, но не считаются отдельными подтверждениями.
 
-Players may optionally include reviewed Community observations in the calculator. Community submissions contain selected gameplay measurements and a pseudonymous app ID used to keep contributors' records separate. After review, accepted measurements can enrich the shared reference model. They do not include technical diagnostic journals.
+Игрок может отдельно включить проверенные наблюдения Community в калькулятор. В отправляемые игровые данные входят только выбранные игровые измерения и псевдонимный ID приложения, который позволяет разделять записи разных игроков. После проверки принятые измерения могут пополнить общую справочную модель. Технические журналы в игровые данные Community не входят.
 
-Technical logs are a separate, optional diagnostic record. They may contain event times, map and gameplay coordinates, app settings and device details. They help investigate bugs and plan fixes; they are not inputs to firing calculations or Community data.
+Технические журналы — отдельные необязательные диагностические записи. Они могут содержать время событий, координаты карты и игры, настройки приложения и сведения об устройстве. Журналы помогают разбирать ошибки и планировать исправления, но не участвуют в расчётах стрельбы и не являются данными Community.
 
-To request a code for optional Community or technical-log submissions, contact **Lurcat** in the [Discord community](https://discord.gg/wardogskoth).
+Чтобы получить код для необязательной отправки игровых данных Community или технических журналов, напишите **Lurcat** в [Discord](https://discord.gg/wardogskoth).
 
-## Project status and affiliation
+## Статус проекта и связь с WARDOGS
 
-This project is an independent community tool and is not affiliated with or endorsed by the WARDOGS publisher. Game updates or changes to maps and weapon behavior may make observations or estimates outdated. Verify results in the game.
+Это независимый инструмент сообщества, не связанный с издателем WARDOGS и не одобренный им. Обновления игры, изменение карт или поведения орудий могут сделать наблюдения и расчёты устаревшими. Проверяйте результат в игре.
 
-The accompanying license applies to LUR Artillery and its original materials. It does not claim exclusive ownership of mathematical ideas, formulas, game facts or independently created methods.
-
----
-
-# LUR Artillery (English)
-
-LUR Artillery is a community-supported firing calculator for WARDOGS. It combines map coordinates, weapon range tables, field calibration and confirmed player observations to estimate range and firing elevation.
-
-## Calculation summary
-
-One tactical map coordinate unit represents approximately 100 metres. Given gun $(X_g,Y_g)$ and target $(X_t,Y_t)$:
-
-- Range: $D=100\sqrt{(X_t-X_g)^2+(Y_t-Y_g)^2}$ metres.
-- Azimuth clockwise from north: $A=(\operatorname{atan2}(X_t-X_g,Y_t-Y_g)\cdot180/\pi+360)\bmod360$ degrees.
-
-The selected weapon and trajectory table maps range to elevation in mils. Between neighboring entries, the calculator uses linear interpolation: $M(r)=m_0+(r-r_0)(m_1-m_0)/(r_1-r_0)$. Supported SPH-2 low-trajectory profiles may add a bounded, map-specific correction based on confirmed field measurements. It fades toward zero beyond its calibrated range.
-
-## Invisible elevation surface and observations
-
-An internal elevation surface is sampled over the 2D map using bilinear interpolation of neighboring heightmap values. A normalized 16-bit value $q$ maps to elevation by $z=z_{min}+q(z_{max}-z_{min})/65535$. This gives terrain heights at gun and target positions for diagnostics; the current firing elevation still comes from the selected range table and applicable field calibration.
-
-Confirmed player adjustment series enrich the local empirical reference model. A continuous series is one independent confirmation; additional shots in that series refine its result. Optional, reviewed Community observations can enrich the shared model, while technical logs remain separate diagnostics and never enter firing calculations.
-
-For a submission code, contact **Lurcat** in the [Discord community](https://discord.gg/wardogskoth). LUR Artillery is an independent community tool and is not affiliated with or endorsed by the WARDOGS publisher. Estimates can become outdated after game changes; verify results in the game.
+Сопроводительная лицензия распространяется на LUR Artillery и его оригинальные материалы. Она не заявляет исключительных прав на математические идеи, формулы, игровые факты или независимо разработанные методы.
